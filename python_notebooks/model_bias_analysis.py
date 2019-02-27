@@ -610,10 +610,10 @@ def per_subgroup_scatterplots(df,
     x = [i] * len(row[values_col])
     y = row[values_col]
     ax.scatter(x, y, s=point_size)
-  ax.set_xticklabels(df[subgroup_col], rotation=90)
+  ax.set_xticklabels(df[subgroup_col], rotation=90,fontsize=14)
   ax.set_xticks(range(len(df)))
   ax.set_ylim(y_lim)
-  ax.set_title(title)
+  ax.set_title(title,fontsize=20)
   fig.tight_layout()
   fig.savefig('/tmp/%s_%s.eps' % (file_name, values_col), format='eps')
 
