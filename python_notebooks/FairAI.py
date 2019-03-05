@@ -450,8 +450,7 @@ def tf_normalize(x):
 class AdversarialEmbeddingModel(object):
   """A model for doing adversarial training of embedding models."""
 
-  def __init__(self, client,
-               data_p, embed_dim, projection,
+  def __init__(self, client,embed_dim, projection,
                projection_dims, pred,verbose=False):
     """Creates a new AdversarialEmbeddingModel.
 
@@ -465,7 +464,6 @@ class AdversarialEmbeddingModel(object):
     """
     # load the analogy vectors as well as the embeddings
     self.client = client
-    self.data_p = data_p
     self.embed_dim = embed_dim
     self.projection = projection
     self.projection_dims = projection_dims
@@ -499,13 +497,11 @@ class AdversarialEmbeddingModel(object):
     
   def fit(self,
           sess,
-          data,
-          data_p,
           labels,
           labels_p,
           protect,
           protect_p,
-          gender_direction,
+          adv_direction,
           pred_learning_rate,
           protect_learning_rate,
           protect_loss_weight,
@@ -535,7 +531,6 @@ class AdversarialEmbeddingModel(object):
   
     ##########################
     feed_dict = {
-        data_p: data,
         labels_p: labels,
         protect_p: protect    }
     
@@ -577,11 +572,10 @@ class AdversarialEmbeddingModel(object):
     ###############################################################################
     step = 0
     while step < num_steps:
-      # pick samples at random without replacement as a minibatch
-      ids = np.random.choice(len(data), batch_size, False)
-      data_s, labels_s, protect_s = data[ids], labels[ids], protect[ids]
+      # pick samples at random without replacement as a minibatch (might want to sample hevy from front items
+      ids = np.random.choice(len(labels), batch_size, False)
+      labels_s, protect_s = labels[ids], protect[ids]
       sgd_feed_dict = {
-          data_p: data_s,
           labels_p: labels_s,
           protect_p: protect_s,
       }
@@ -595,47 +589,8 @@ class AdversarialEmbeddingModel(object):
         print("step: %d; pred_loss_o: %f; protect_loss_o: %f" % (step,
                      pred_loss_o, protect_loss_o))
         for i in range(proj_o.shape[1]):
-          print("proj_o: %f; dot(proj_o, gender_direction): %f)" %
+          print("proj_o: %f; dot(proj_o, adv_direction): %f)" %
                        (np.linalg.norm(proj_o[:, i]),
-                       np.dot(proj_o[:, i].flatten(), gender_direction)))
+                       np.dot(proj_o[:, i].flatten(), adv_direction)))
       sess.run([pred_min, protect_min], feed_dict=sgd_feed_dict)
       step += 1
-      
-def filter_analogies(analogies,
-                     index_map):
-  filtered_analogies = []
-  for analogy in analogies:
-    if filter(index_map.has_key, analogy) != analogy:
-      print "at least one word missing for analogy: %s" % analogy
-    else:
-      filtered_analogies.append(map(index_map.get, analogy))
-  return filtered_analogies
-
-def make_data(
-    analogies, embed,
-    gender_direction):
-  """Preps the training data.
-
-  Args:
-    analogies: a list of analogies
-    embed: the embedding matrix from load_vectors
-    gender_direction: the gender direction from find_gender_direction
-
-  Returns:
-    Three numpy arrays corresponding respectively to the input, output, and
-    protected variables.
-  """
-  data = []
-  labels = []
-  protect = []
-  for analogy in analogies:
-    # the input is just the word embeddings of the first three words
-    data.append(embed[analogy[:3]])
-    # the output is just the word embeddings of the last word
-    labels.append(embed[analogy[3]])
-    # the protected variable is the gender component of the output embedding.
-    # the extra pair of [] is so that the array has the right shape after
-    # it is converted to a numpy array.
-    protect.append([np.dot(embed[analogy[3]], gender_direction)])
-  # Convert all three to numpy arrays, and return them.
-  return tuple(map(np.array, (data, labels, protect)))
