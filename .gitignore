@@ -2,3 +2,11 @@ data*/*
 models/*
 
 *checkpoints*
+*.txt
+*.pkl
+
+*.pyc
+*.png
+*.npy
+*.model
+
